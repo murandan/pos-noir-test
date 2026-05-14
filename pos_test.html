@@ -1150,8 +1150,19 @@ function sendInvoiceToBackend() {
     if (parsedInvoiceData.length === 0) return alert("Корзина пуста!");
     
     const btn = document.getElementById('sendInvoiceBtn');
-    btn.innerText = "⏳ Отправка в базу...";
+    const statusContainer = document.getElementById('status-container');
+    const statusBar = document.getElementById('status-bar');
+    const statusText = document.getElementById('status-text');
+    const statusPercent = document.getElementById('status-percent');
+
     btn.disabled = true;
+    btn.style.opacity = '0.5';
+    statusContainer.style.display = 'block';
+    
+    // Обновляем статус: начало
+    statusText.innerText = "Связь с сервером...";
+    statusBar.style.width = '10%';
+    statusPercent.innerText = '10%';
 
     fetch(scriptUrl, {
         method: 'POST',
@@ -1159,18 +1170,31 @@ function sendInvoiceToBackend() {
     })
     .then(r => r.json())
     .then(res => {
+        statusBar.style.width = '100%';
+        statusPercent.innerText = '100%';
+        
         if (res.success) {
-            alert("✅ Накладная успешно проведена!");
-            toggleIncomeModule();
-            refreshData(); // Обновляем остатки на главном экране кассы
+            statusText.innerText = "Готово! Склад обновлен.";
+            setTimeout(() => {
+                alert("✅ Накладная успешно проведена!");
+                toggleIncomeModule();
+                if (typeof refreshData === 'function') refreshData(); 
+            }, 500);
         } else {
+            statusText.innerText = "Ошибка сервера";
+            statusText.style.color = "#e74c3c";
             alert("❌ Ошибка сервера: " + res.error);
         }
     })
-    .catch(err => alert("❌ Ошибка сети: " + err))
+    .catch(err => {
+        statusText.innerText = "Ошибка сети";
+        statusText.style.color = "#e74c3c";
+        alert("❌ Ошибка сети: " + err);
+    })
     .finally(() => {
-        btn.innerText = "✅ ОПРИХОДОВАТЬ НА СКЛАД";
         btn.disabled = false;
+        btn.style.opacity = '1';
+        // Не скрываем контейнер сразу, чтобы пользователь увидел результат
     });
 }
     </script>
@@ -1198,6 +1222,15 @@ function sendInvoiceToBackend() {
                         <tbody id="invoiceTableBody"></tbody>
                     </table>
                 </div>
+                <div id="status-container" style="display: none; margin: 15px 0; padding: 10px; background: #050505; border: 1px solid #333; border-radius: 4px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px;">
+        <span id="status-text" style="color: #2ecc71;">Подготовка...</span>
+        <span id="status-percent" style="color: #aaa;">0%</span>
+    </div>
+    <div style="width: 100%; height: 4px; background: #222; border-radius: 2px; overflow: hidden;">
+        <div id="status-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.3s;"></div>
+    </div>
+</div>
                 <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
                     ✅ ОПРИХОДОВАТЬ НА СКЛАД
                 </button>
