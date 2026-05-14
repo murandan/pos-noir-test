@@ -1035,6 +1035,171 @@
             if (e.key === 'Enter') { if (barcodeBuffer.length > 2) { e.preventDefault(); const item = db.find(i => String(i.barcode) === String(barcodeBuffer)); if (item) { add(item.id); if (navigator.vibrate) navigator.vibrate(50); } barcodeBuffer = ''; } } else barcodeBuffer += e.key;
             lastKeyTime = currentTime;
         });
+        // --- МОДУЛЬ УМНОЙ ПРИЕМКИ (ИНВОЙСЫ) ---
+let parsedInvoiceData = [];
+
+function toggleIncomeModule() {
+    const modal = document.getElementById('income-modal');
+    if (modal.style.display === 'none' || modal.style.display === '') {
+        modal.style.display = 'flex';
+    } else {
+        modal.style.display = 'none';
+        document.getElementById('invoicePreviewArea').style.display = 'none';
+        document.getElementById('invoiceFileInput').value = '';
+        parsedInvoiceData = [];
+    }
+}
+
+function parseCSVRow(str) {
+    let arr = [], quote = false, col = '';
+    for (let i = 0; i < str.length; i++) {
+        let cc = str[i], nc = str[i+1];
+        if (cc === '"' && quote && nc === '"') { col += cc; i++; continue; }
+        if (cc === '"') { quote = !quote; continue; }
+        if (cc === ',' && !quote) { arr.push(col); col = ''; continue; }
+        col += cc;
+    }
+    arr.push(col);
+    return arr.map(s => s.trim());
+}
+
+function processInvoiceFile() {
+    const fileInput = document.getElementById('invoiceFileInput');
+    if (!fileInput.files.length) return alert("Пожалуйста, выберите файл!");
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const lines = e.target.result.split('\n');
+        let doc_no = 'UNKNOWN', supplier = 'UNKNOWN';
+        let headerRowIdx = -1;
+        let colMap = { code: -1, name: -1, qty: -1, price: -1 };
+
+        // Ищем шапку
+        for (let i = 0; i < Math.min(25, lines.length); i++) {
+            if (!lines[i].trim()) continue;
+            const row = parseCSVRow(lines[i]);
+
+            for (let j = 0; j < row.length; j++) {
+                if (row[j].toUpperCase().includes('CONTRACT NO')) doc_no = row[j+1] || row[j+2] || 'UNKNOWN';
+                if (row[j].toUpperCase().includes('THE SELLER') || row[j].toUpperCase().includes('VENDOR')) supplier = row[j+1] || row[j+2] || 'UNKNOWN';
+            }
+
+            let cIdx = row.findIndex(c => c.toUpperCase() === 'CODE' || c.toUpperCase() === 'ITEM');
+            let qIdx = row.findIndex(c => c.toUpperCase().includes('QUANTITY') || c.toUpperCase() === 'QTY');
+            let pIdx = row.findIndex(c => c.toUpperCase().includes('PRICE'));
+            let nIdx = row.findIndex(c => c.toUpperCase().includes('DESCRIPTION') || c.toUpperCase().includes('BRAND'));
+
+            if (cIdx !== -1 && qIdx !== -1 && pIdx !== -1) {
+                headerRowIdx = i;
+                colMap = { code: cIdx, name: nIdx, qty: qIdx, price: pIdx };
+                break;
+            }
+        }
+
+        if (headerRowIdx === -1) return alert("❌ Не удалось распознать структуру файла. Нужны колонки Code, Quantity и Price.");
+
+        // Парсим товары
+        parsedInvoiceData = [];
+        for (let i = headerRowIdx + 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const row = parseCSVRow(lines[i]);
+            
+            if (row.length <= colMap.code || !row[colMap.code]) continue;
+            if (row[colMap.code].toUpperCase().includes('TOTAL') || row[colMap.code].toUpperCase().includes('NOTE')) break;
+
+            let qty = parseFloat(row[colMap.qty]);
+            let price = parseFloat(row[colMap.price]);
+            let name = colMap.name !== -1 ? row[colMap.name] : 'Авто-распознано';
+
+            if (!isNaN(qty) && !isNaN(price)) {
+                parsedInvoiceData.push({
+                    doc_no: doc_no,
+                    supplier: supplier,
+                    item_id: row[colMap.code],
+                    item_name: name,
+                    qty: qty,
+                    cost: price,
+                    staff_id: currentSeller ? currentSeller.uid : 'Auto-Import' 
+                });
+            }
+        }
+
+        document.getElementById('invoiceMetadata').innerText = `Поставщик: ${supplier} | Документ: ${doc_no} | Позиций: ${parsedInvoiceData.length}`;
+        const tbody = document.getElementById('invoiceTableBody');
+        tbody.innerHTML = '';
+        parsedInvoiceData.forEach(item => {
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid #333;">
+                    <td style="padding: 5px;">${item.item_id}</td>
+                    <td style="padding: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${item.item_name}</td>
+                    <td style="padding: 5px;">${item.qty}</td>
+                    <td style="padding: 5px;">$${item.cost}</td>
+                </tr>`;
+        });
+        document.getElementById('invoicePreviewArea').style.display = 'flex';
+    };
+    reader.readAsText(file, 'UTF-8');
+}
+
+function sendInvoiceToBackend() {
+    if (parsedInvoiceData.length === 0) return alert("Корзина пуста!");
+    
+    const btn = document.getElementById('sendInvoiceBtn');
+    btn.innerText = "⏳ Отправка в базу...";
+    btn.disabled = true;
+
+    fetch(scriptUrl, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'income', data: parsedInvoiceData })
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            alert("✅ Накладная успешно проведена!");
+            toggleIncomeModule();
+            refreshData(); // Обновляем остатки на главном экране кассы
+        } else {
+            alert("❌ Ошибка сервера: " + res.error);
+        }
+    })
+    .catch(err => alert("❌ Ошибка сети: " + err))
+    .finally(() => {
+        btn.innerText = "✅ ОПРИХОДОВАТЬ НА СКЛАД";
+        btn.disabled = false;
+    });
+}
     </script>
+<div id="income-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
+        <div style="background: #111; border: 1px solid #333; border-radius: 8px; width: 95%; max-width: 600px; padding: 20px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; position: relative;">
+            <button onclick="toggleIncomeModule()" style="position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
+            <h3 style="margin-bottom: 10px; color: #2ecc71;">📦 Импорт накладной (CSV)</h3>
+            <p style="font-size: 12px; color: #aaa; margin-bottom: 15px;">Загрузите инвойс. Система сама найдет колонки Code, Qty и Price.</p>
+            
+            <input type="file" id="invoiceFileInput" accept=".csv" style="margin-bottom: 15px; color: #fff; width: 100%; border: 1px dashed #555; padding: 10px; background: #0a0a0a;">
+            <button onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;">РАСПОЗНАТЬ ФАЙЛ</button>
+            
+            <div id="invoicePreviewArea" style="display: none; margin-top: 20px; flex-direction: column; overflow: hidden;">
+                <div id="invoiceMetadata" style="margin-bottom: 10px; font-weight: bold; color: #f1c40f; font-size: 13px; text-align: center;"></div>
+                <div style="overflow-y: auto; border: 1px solid #333; margin-bottom: 15px; flex-grow: 1;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead style="background: #222; position: sticky; top: 0;">
+                            <tr style="border-bottom: 1px solid #555; text-align: left;">
+                                <th style="padding: 8px;">Код</th>
+                                <th style="padding: 8px;">Наименование</th>
+                                <th style="padding: 8px;">Кол-во</th>
+                                <th style="padding: 8px;">Цена</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceTableBody"></tbody>
+                    </table>
+                </div>
+                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
+                    ✅ ОПРИХОДОВАТЬ НА СКЛАД
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
