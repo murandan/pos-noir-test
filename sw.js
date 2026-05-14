@@ -1,11 +1,11 @@
 const CACHE_NAME = 'pos-v66'; // <--- ВОТ ТУТ ПИШЕТСЯ ВЕРСИЯ, КОТОРУЮ ПОКАЖЕТ КАССА
 
 const ASSETS = [
-//  './',
+  './',
   './pos_test.html',
   './config.js',
-//  './manifest.json',
-//  './icon.png' // <--- Вот она, разгадка! Мы указали правильное имя.
+  './manifest.json',
+  './icon.png' // <--- Вот она, разгадка! Мы указали правильное имя.
 ];
 
 self.addEventListener('install', e => {
