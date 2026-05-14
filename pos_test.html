@@ -1036,169 +1036,170 @@
             if (e.key === 'Enter') { if (barcodeBuffer.length > 2) { e.preventDefault(); const item = db.find(i => String(i.barcode) === String(barcodeBuffer)); if (item) { add(item.id); if (navigator.vibrate) navigator.vibrate(50); } barcodeBuffer = ''; } } else barcodeBuffer += e.key;
             lastKeyTime = currentTime;
         });
+        
         // --- МОДУЛЬ УМНОЙ ПРИЕМКИ (ИНВОЙСЫ) ---
-let parsedInvoiceData = [];
+        let parsedInvoiceData = [];
 
-function toggleIncomeModule() {
-    const modal = document.getElementById('income-modal');
-    if (modal.style.display === 'none' || modal.style.display === '') {
-        modal.style.display = 'flex';
-    } else {
-        modal.style.display = 'none';
-        document.getElementById('invoicePreviewArea').style.display = 'none';
-        document.getElementById('invoiceFileInput').value = '';
-        parsedInvoiceData = [];
-    }
-}
-
-function processInvoiceFile() {
-    const fileInput = document.getElementById('invoiceFileInput');
-    if (!fileInput.files.length) return alert("Пожалуйста, выберите файл!");
-
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        
-        try {
-            const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            
-            const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
-
-            let doc_no = 'UNKNOWN', supplier = 'UNKNOWN';
-            let headerRowIdx = -1;
-            let colMap = { code: -1, name: -1, qty: -1, price: -1 };
-
-            for (let i = 0; i < Math.min(25, rows.length); i++) {
-                const row = rows[i];
-                if (!row || row.length === 0) continue;
-
-                for (let j = 0; j < row.length; j++) {
-                    const cellValue = String(row[j] || '').toUpperCase().trim();
-                    if (cellValue.includes('CONTRACT NO')) doc_no = row[j+1] || row[j+2] || 'UNKNOWN';
-                    if (cellValue.includes('THE SELLER') || cellValue.includes('VENDOR')) supplier = row[j+1] || row[j+2] || 'UNKNOWN';
-                }
-
-                let cIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s === 'CODE' || s === 'ITEM'; });
-                let qIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('QUANTITY') || s === 'QTY'; });
-                let pIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('PRICE'); });
-                let nIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('DESCRIPTION') || s.includes('BRAND'); });
-
-                if (cIdx !== -1 && qIdx !== -1 && pIdx !== -1) {
-                    headerRowIdx = i;
-                    colMap = { code: cIdx, name: nIdx, qty: qIdx, price: pIdx };
-                    break;
-                }
+        function toggleIncomeModule() {
+            const modal = document.getElementById('income-modal');
+            if (modal.style.display === 'none' || modal.style.display === '') {
+                modal.style.display = 'flex';
+            } else {
+                modal.style.display = 'none';
+                document.getElementById('invoicePreviewArea').style.display = 'none';
+                document.getElementById('invoiceFileInput').value = '';
+                parsedInvoiceData = [];
             }
+        }
 
-            if (headerRowIdx === -1) return alert("❌ Не удалось найти заголовки таблицы (Code, Quantity, Price).");
+        function processInvoiceFile() {
+            const fileInput = document.getElementById('invoiceFileInput');
+            if (!fileInput.files.length) return alert("Пожалуйста, выберите файл!");
 
-            parsedInvoiceData = [];
-            for (let i = headerRowIdx + 1; i < rows.length; i++) {
-                const row = rows[i];
-                if (!row || row.length === 0) continue;
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
                 
-                const codeCell = String(row[colMap.code] || '').trim();
-                if (!codeCell) continue;
-                
-                if (codeCell.toUpperCase().includes('TOTAL') || codeCell.toUpperCase().includes('NOTE')) break;
+                try {
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const rows = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
-                let qty = parseFloat(row[colMap.qty]);
-                let price = parseFloat(row[colMap.price]);
-                let name = colMap.name !== -1 ? String(row[colMap.name] || '') : 'Без названия';
+                    let doc_no = 'UNKNOWN', supplier = 'UNKNOWN';
+                    let headerRowIdx = -1;
+                    let colMap = { code: -1, name: -1, qty: -1, price: -1 };
 
-                if (!isNaN(qty) && !isNaN(price)) {
-                    parsedInvoiceData.push({
-                        doc_no: doc_no,
-                        supplier: supplier,
-                        item_id: codeCell,
-                        item_name: name,
-                        qty: qty,
-                        cost: price,
-                        staff_id: (typeof currentSeller !== 'undefined' && currentSeller) ? currentSeller.uid : 'Auto-Import' 
+                    for (let i = 0; i < Math.min(25, rows.length); i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+
+                        for (let j = 0; j < row.length; j++) {
+                            const cellValue = String(row[j] || '').toUpperCase().trim();
+                            if (cellValue.includes('CONTRACT NO')) doc_no = row[j+1] || row[j+2] || 'UNKNOWN';
+                            if (cellValue.includes('THE SELLER') || cellValue.includes('VENDOR')) supplier = row[j+1] || row[j+2] || 'UNKNOWN';
+                        }
+
+                        let cIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s === 'CODE' || s === 'ITEM'; });
+                        let qIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('QUANTITY') || s === 'QTY'; });
+                        let pIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('PRICE'); });
+                        let nIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('DESCRIPTION') || s.includes('BRAND'); });
+
+                        if (cIdx !== -1 && qIdx !== -1 && pIdx !== -1) {
+                            headerRowIdx = i;
+                            colMap = { code: cIdx, name: nIdx, qty: qIdx, price: pIdx };
+                            break;
+                        }
+                    }
+
+                    if (headerRowIdx === -1) return alert("❌ Не удалось найти заголовки таблицы (Code, Quantity, Price).");
+
+                    parsedInvoiceData = [];
+                    for (let i = headerRowIdx + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length === 0) continue;
+                        
+                        const codeCell = String(row[colMap.code] || '').trim();
+                        if (!codeCell) continue;
+                        
+                        if (codeCell.toUpperCase().includes('TOTAL') || codeCell.toUpperCase().includes('NOTE')) break;
+
+                        let qty = parseFloat(row[colMap.qty]);
+                        let price = parseFloat(row[colMap.price]);
+                        let name = colMap.name !== -1 ? String(row[colMap.name] || '') : 'Без названия';
+
+                        if (!isNaN(qty) && !isNaN(price)) {
+                            parsedInvoiceData.push({
+                                doc_no: doc_no,
+                                supplier: supplier,
+                                item_id: codeCell,
+                                item_name: name,
+                                qty: qty,
+                                cost: price,
+                                staff_id: (typeof currentSeller !== 'undefined' && currentSeller) ? currentSeller.uid : 'Auto-Import' 
+                            });
+                        }
+                    }
+
+                    document.getElementById('invoiceMetadata').innerText = `Поставщик: ${supplier} | Документ: ${doc_no} | Позиций: ${parsedInvoiceData.length}`;
+                    const tbody = document.getElementById('invoiceTableBody');
+                    tbody.innerHTML = '';
+                    parsedInvoiceData.forEach(item => {
+                        tbody.innerHTML += `
+                            <tr style="border-bottom: 1px solid #333;">
+                                <td style="padding: 5px;">${item.item_id}</td>
+                                <td style="padding: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${item.item_name}</td>
+                                <td style="padding: 5px;">${item.qty}</td>
+                                <td style="padding: 5px;">$${item.cost}</td>
+                            </tr>`;
                     });
+                    document.getElementById('invoicePreviewArea').style.display = 'flex';
+
+                } catch (error) {
+                    console.error(error);
+                    alert("❌ Ошибка при чтении Excel файла. Убедитесь, что файл не поврежден.");
                 }
-            }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
 
-            document.getElementById('invoiceMetadata').innerText = `Поставщик: ${supplier} | Документ: ${doc_no} | Позиций: ${parsedInvoiceData.length}`;
-            const tbody = document.getElementById('invoiceTableBody');
-            tbody.innerHTML = '';
-            parsedInvoiceData.forEach(item => {
-                tbody.innerHTML += `
-                    <tr style="border-bottom: 1px solid #333;">
-                        <td style="padding: 5px;">${item.item_id}</td>
-                        <td style="padding: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">${item.item_name}</td>
-                        <td style="padding: 5px;">${item.qty}</td>
-                        <td style="padding: 5px;">$${item.cost}</td>
-                    </tr>`;
+        function sendInvoiceToBackend() {
+            if (parsedInvoiceData.length === 0) return alert("Корзина пуста!");
+            
+            const btn = document.getElementById('sendInvoiceBtn');
+            const statusContainer = document.getElementById('status-container');
+            const statusBar = document.getElementById('status-bar');
+            const statusText = document.getElementById('status-text');
+            const statusPercent = document.getElementById('status-percent');
+
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            statusContainer.style.display = 'block';
+            
+            // Обновляем статус: начало
+            statusText.innerText = "Связь с сервером...";
+            statusBar.style.width = '10%';
+            statusPercent.innerText = '10%';
+
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'income', data: parsedInvoiceData })
+            })
+            .then(r => r.json())
+            .then(res => {
+                statusBar.style.width = '100%';
+                statusPercent.innerText = '100%';
+                
+                if (res.success) {
+                    statusText.innerText = "Готово! Склад обновлен.";
+                    setTimeout(() => {
+                        alert("✅ Накладная успешно проведена!");
+                        toggleIncomeModule();
+                        if (typeof refreshData === 'function') refreshData(); 
+                    }, 500);
+                } else {
+                    statusText.innerText = "Ошибка сервера";
+                    statusText.style.color = "#e74c3c";
+                    alert("❌ Ошибка сервера: " + res.error);
+                }
+            })
+            .catch(err => {
+                statusText.innerText = "Ошибка сети";
+                statusText.style.color = "#e74c3c";
+                alert("❌ Ошибка сети: " + err);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                // Не скрываем контейнер сразу, чтобы пользователь увидел результат
             });
-            document.getElementById('invoicePreviewArea').style.display = 'flex';
-
-        } catch (error) {
-            console.error(error);
-            alert("❌ Ошибка при чтении Excel файла. Убедитесь, что файл не поврежден.");
         }
-    };
-    
-    reader.readAsArrayBuffer(file);
-}
-
-function sendInvoiceToBackend() {
-    if (parsedInvoiceData.length === 0) return alert("Корзина пуста!");
-    
-    const btn = document.getElementById('sendInvoiceBtn');
-    const statusContainer = document.getElementById('status-container');
-    const statusBar = document.getElementById('status-bar');
-    const statusText = document.getElementById('status-text');
-    const statusPercent = document.getElementById('status-percent');
-
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    statusContainer.style.display = 'block';
-    
-    // Обновляем статус: начало
-    statusText.innerText = "Связь с сервером...";
-    statusBar.style.width = '10%';
-    statusPercent.innerText = '10%';
-
-    fetch(scriptUrl, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'income', data: parsedInvoiceData })
-    })
-    .then(r => r.json())
-    .then(res => {
-        statusBar.style.width = '100%';
-        statusPercent.innerText = '100%';
-        
-        if (res.success) {
-            statusText.innerText = "Готово! Склад обновлен.";
-            setTimeout(() => {
-                alert("✅ Накладная успешно проведена!");
-                toggleIncomeModule();
-                if (typeof refreshData === 'function') refreshData(); 
-            }, 500);
-        } else {
-            statusText.innerText = "Ошибка сервера";
-            statusText.style.color = "#e74c3c";
-            alert("❌ Ошибка сервера: " + res.error);
-        }
-    })
-    .catch(err => {
-        statusText.innerText = "Ошибка сети";
-        statusText.style.color = "#e74c3c";
-        alert("❌ Ошибка сети: " + err);
-    })
-    .finally(() => {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        // Не скрываем контейнер сразу, чтобы пользователь увидел результат
-    });
-}
     </script>
-<div id="income-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
+    <div id="income-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
         <div style="background: #111; border: 1px solid #333; border-radius: 8px; width: 95%; max-width: 600px; padding: 20px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; position: relative;">
             <button onclick="toggleIncomeModule()" style="position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
             <h3 style="margin-bottom: 10px; color: #2ecc71;">📦 Импорт накладной (CSV)</h3>
@@ -1223,15 +1224,15 @@ function sendInvoiceToBackend() {
                     </table>
                 </div>
                 <div id="status-container" style="display: none; margin: 15px 0; padding: 10px; background: #050505; border: 1px solid #333; border-radius: 4px;">
-    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px;">
-        <span id="status-text" style="color: #2ecc71;">Подготовка...</span>
-        <span id="status-percent" style="color: #aaa;">0%</span>
-    </div>
-    <div style="width: 100%; height: 4px; background: #222; border-radius: 2px; overflow: hidden;">
-        <div id="status-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.3s;"></div>
-    </div>
-</div>
-                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px;">
+                        <span id="status-text" style="color: #2ecc71;">Подготовка...</span>
+                        <span id="status-percent" style="color: #aaa;">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 4px; background: #222; border-radius: 2px; overflow: hidden;">
+                        <div id="status-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="margin-top: 15px; background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
                     ✅ ОПРИХОДОВАТЬ НА СКЛАД
                 </button>
             </div>
