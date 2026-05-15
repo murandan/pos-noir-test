@@ -896,16 +896,21 @@
 
         // --- ДИНАМИЧЕСКАЯ ВЕРСИЯ ИЗ SW ---
         function displayAppVersion() {
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                const messageChannel = new MessageChannel();
-                messageChannel.port1.onmessage = function(event) {
-                    if (event.data && event.data.version) {
-                        document.getElementById('app-version').innerText = "v: " + event.data.version;
-                    }
-                };
-                navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [messageChannel.port2]);
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = function(event) {
+            if (event.data && event.data.version) {
+                // Выводим РЕАЛЬНУЮ версию, которую отдал кэш
+                document.getElementById('app-version').innerText = "SW: " + event.data.version;
             }
-        }
+        };
+        // Стучимся в Service Worker с вопросом "какая у тебя версия?"
+        navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [messageChannel.port2]);
+    } else {
+        // Если кэш еще не установился или отключен
+        document.getElementById('app-version').innerText = "Без кэша (Онлайн)";
+    }
+}
 
         if ('serviceWorker' in navigator) {
             // Подстраховка на случай глобальных сообщений от SW
