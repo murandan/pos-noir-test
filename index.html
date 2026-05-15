@@ -332,7 +332,17 @@
                 report_name: "НАИМЕНОВАНИЕ", report_qty: "КОЛ.", report_sum: "СУММА",
                 report_sales: "Продажи", report_returns: "Возвраты", report_total_net: "Итого (чис.):",
                 report_in_register: "В КАССЕ:", msg_loading: "ЗАГРУЗКА...", msg_no_internet: "НЕТ ИНТЕРНЕТА", 
-                msg_no_data: "ОПЕРАЦИЙ НЕ НАЙДЕНО", msg_server_error: "ОШИБКА СЕРВЕРА"
+                msg_no_data: "ОПЕРАЦИЙ НЕ НАЙДЕНО", msg_server_error: "ОШИБКА СЕРВЕРА",
+                report_avg: "ср:",
+                income_title: "📦 ИМПОРТ НАКЛАДНОЙ",
+                income_rate: "Курс USD/KZT:",
+                income_file: "Выберите файл:",
+                income_parse: "РАСПОЗНАТЬ ФАЙЛ",
+                income_code: "Код",
+                income_name: "Наименование",
+                income_qty: "Кол-во",
+                income_price: "Цена ($)",
+                income_confirm: "✅ ОПРИХОДОВАТЬ НА СКЛАД"
             },
             kz: {
                 btn_sale: "САТУ", btn_return: "ҚАЙТАРУ", search_placeholder: "ІЗДЕУ...",
@@ -352,7 +362,17 @@
                 report_name: "АТАУЫ", report_qty: "САНЫ", report_sum: "СОМАСЫ",
                 report_sales: "Сатылымдар", report_returns: "Қайтарымдар", report_total_net: "Таза табыс:",
                 report_in_register: "КАССАДА:", msg_loading: "ЖҮКТЕЛУДЕ...", msg_no_internet: "ИНТЕРНЕТ ЖОҚ", 
-                msg_no_data: "ОПЕРАЦИЯЛАР ЖОҚ", msg_server_error: "СЕРВЕР ҚАТЕСІ"
+                msg_no_data: "ОПЕРАЦИЯЛАР ЖОҚ", msg_server_error: "СЕРВЕР ҚАТЕСІ",
+                report_avg: "орт:",
+                income_title: "📦 ЖҮКҚҰЖАТТЫ ИМПОРТТАУ",
+                income_rate: "USD/KZT бағамы:",
+                income_file: "Файлды таңдаңыз:",
+                income_parse: "ФАЙЛДЫ ОҚУ",
+                income_code: "Коды",
+                income_name: "Атауы",
+                income_qty: "Саны",
+                income_price: "Бағасы ($)",
+                income_confirm: "✅ ҚОЙМАҒА КІРІСТЕУ"
             }
         };
 
@@ -866,7 +886,7 @@ sortedItems.forEach(item => {
         let avgSale = Math.round(item.salesSum / item.salesQty);
         detailsHtml += `
             <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                <span style="color: #888;">${ui.sales} (${item.salesQty}) <small>| ср: ${avgSale.toLocaleString()} ₸</small></span>
+                <span style="color: #888;">${ui.sales} (${item.salesQty}) <small>| ${translations[currentLang].report_avg} ${avgSale.toLocaleString()} ₸</small></span>
                 <span style="color: #4ade80;">${item.salesSum.toLocaleString()}</span>
             </div>`;
     }
@@ -876,7 +896,7 @@ sortedItems.forEach(item => {
         let avgReturn = Math.round(item.returnsSum / item.returnsQty);
         detailsHtml += `
             <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
-                <span style="color: #888;">${ui.returns} (${item.returnsQty}) <small>| ср: ${avgReturn.toLocaleString()} ₸</small></span>
+                <span style="color: #888;">${ui.returns} (${item.returnsQty}) <small>| ${translations[currentLang].report_avg} ${avgReturn.toLocaleString()} ₸</small></span>
                 <span style="color: #f87171;">-${item.returnsSum.toLocaleString()}</span>
             </div>`;
     }
@@ -1252,20 +1272,20 @@ sortedItems.forEach(item => {
     <div id="income-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
         <div style="background: #111; border: 1px solid #333; border-radius: 8px; width: 95%; max-width: 600px; padding: 20px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; position: relative;">
             <button onclick="toggleIncomeModule()" style="position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
-            <h3 style="margin-bottom: 10px; color: #2ecc71;">📦 Импорт накладной</h3>
+            <h3 style="margin-bottom: 10px; color: #2ecc71;" data-i18n="income_title">📦 Импорт накладной</h3>
             
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <div style="flex: 1;">
-                    <label style="font-size: 10px; color: #888;">Курс USD/KZT:</label>
+                    <label style="font-size: 10px; color: #888;" data-i18n="income_rate">Курс USD/KZT:</label>
                     <input type="number" id="exchangeRate" value="450" style="width: 100%; background: #0a0a0a; color: #f1c40f; border: 1px dashed #555; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">
                 </div>
                 <div style="flex: 2;">
-                    <label style="font-size: 10px; color: #888;">Выберите файл:</label>
+                    <label style="font-size: 10px; color: #888;" data-i18n="income_file">Выберите файл:</label>
                     <input type="file" id="invoiceFileInput" accept=".csv, .xls, .xlsx" style="width: 100%; color: #fff; border: 1px dashed #555; padding: 10px; background: #0a0a0a; border-radius: 4px; font-size: 12px;">
                 </div>
             </div>
             
-            <button onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;">РАСПОЗНАТЬ ФАЙЛ</button>
+            <button onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;" data-i18n="income_parse">РАСПОЗНАТЬ ФАЙЛ</button>
             
             <div id="invoicePreviewArea" style="display: none; margin-top: 20px; flex-direction: column; overflow: hidden;">
                 <div id="invoiceMetadata" style="margin-bottom: 10px; font-weight: bold; color: #f1c40f; font-size: 13px; text-align: center;"></div>
@@ -1273,10 +1293,10 @@ sortedItems.forEach(item => {
                     <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
                         <thead style="background: #222; position: sticky; top: 0;">
                             <tr style="border-bottom: 1px solid #555; text-align: left;">
-                                <th style="padding: 8px;">Код</th>
-                                <th style="padding: 8px;">Наименование</th>
-                                <th style="padding: 8px;">Кол-во</th>
-                                <th style="padding: 8px;">Цена ($)</th>
+                                <th style="padding: 8px;" data-i18n="income_code">Код</th>
+                                <th style="padding: 8px;" data-i18n="income_name">Наименование</th>
+                                <th style="padding: 8px;" data-i18n="income_qty">Кол-во</th>
+                                <th style="padding: 8px;" data-i18n="income_price">Цена ($)</th>
                             </tr>
                         </thead>
                         <tbody id="invoiceTableBody"></tbody>
@@ -1293,9 +1313,10 @@ sortedItems.forEach(item => {
                     </div>
                 </div>
                 
-                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
+                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;" data-i18n="income_confirm">
                     ✅ ОПРИХОДОВАТЬ НА СКЛАД
                 </button>
+            </div>
             </div>
         </div>
     </div>
