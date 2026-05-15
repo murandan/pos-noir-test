@@ -375,7 +375,6 @@
             document.body.style.backgroundColor = m === 'return' ? '#2c0b0b' : '#0a0a0a';
         }
 
-        // --- ЛОГИКА КАСТОМНОЙ КЛАВИАТУРЫ ---
         function addPin(digit) {
             if (currentPinInput.length < 4) {
                 currentPinInput += digit;
@@ -464,10 +463,9 @@
                 const data = await res.json();
                 if (data.items) db = data.items;
                 if (data.staff) {
-    staffList = data.staff;
-    localStorage.setItem('staff_cache', JSON.stringify(staffList));
-    
-}
+                    staffList = data.staff;
+                    localStorage.setItem('staff_cache', JSON.stringify(staffList));
+                }
                 const t = data.totals || { cash: 0, qr_kaspi: 0, installment: 0, pos_terminal: 0, transfer: 0 };
                 document.getElementById('sum-cash').innerText = (t.cash || 0).toLocaleString() + ' ₸';
                 document.getElementById('sum-qr').innerText   = (t.qr_kaspi || t.qr || 0).toLocaleString() + ' ₸';
@@ -520,18 +518,11 @@
         }
 
         function handleFocus(elem, rowId) {
-            // Выделяем текст, чтобы при вводе старые цифры стирались
             elem.select(); 
-            
-            // Функция плавной прокрутки к центру экрана
             const alignRow = () => {
                 const row = document.getElementById(rowId);
                 if (row) row.scrollIntoView({behavior: "smooth", block: "center"});
             };
-
-            // Страховка от перекрытия при первом запуске:
-            // 350мс - сработает, если клавиатура уже "разогрета" и открылась быстро
-            // 750мс - сработает, если телефон "задумался" при первом открытии клавиатуры
             setTimeout(alignRow, 350); 
             setTimeout(alignRow, 750); 
         }
@@ -631,7 +622,6 @@
             }
         }
 
-        // --- БЕСШОВНОЕ ПЕРЕЛИВАНИЕ (CACHE INJECTION) ---
         function moveTxToCacheLocally(tx) {
             try {
                 const qDate = tx.created_at.split(' ')[0]; 
@@ -674,7 +664,7 @@
             try {
                 const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(queue[0]) });
                 if ((await res.json()).success) { 
-                    moveTxToCacheLocally(queue[0]); // Инъекция в кэш!
+                    moveTxToCacheLocally(queue[0]); 
                     queue.shift(); 
                     localStorage.setItem('txQueue', JSON.stringify(queue)); 
                     updateQueueCounter(); 
@@ -693,7 +683,7 @@
                 try {
                     const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(queue[0]) });
                     if ((await res.json()).success) { 
-                        moveTxToCacheLocally(queue[0]); // Инъекция в кэш!
+                        moveTxToCacheLocally(queue[0]); 
                         queue.shift(); 
                         localStorage.setItem('txQueue', JSON.stringify(queue)); 
                         updateQueueCounter(); 
@@ -803,7 +793,6 @@
                 }
             }
 
-            // --- ПОДМЕШИВАЕМ ОФФЛАЙН ЧЕКИ ИЗ ОЧЕРЕДИ ---
             let queue = JSON.parse(localStorage.getItem('txQueue') || '[]');
             if (queue.length > 0) {
                 queue.forEach(qTx => {
@@ -919,6 +908,12 @@
         }
 
         if ('serviceWorker' in navigator) {
+            // Подстраховка на случай глобальных сообщений от SW
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'VERSION_INFO') {
+                    document.getElementById('app-version').innerText = "v: " + event.data.version;
+                }
+            });
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js').then(() => {
                     if (navigator.serviceWorker.controller) displayAppVersion();
@@ -950,11 +945,8 @@
 
             if (item.img && item.img.length > 5) {
                 let safeUrl = item.img; 
-                // Вытягиваем ID файла
                 const match = item.img.match(/[-\w]{25,}/); 
                 if (match) {
-                    // Используем скрытый thumbnail API от Google. 
-                    // sz=w800 означает ширину 800px. Гугл отдаст чистую картинку без редиректов!
                     safeUrl = 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w800';
                 }
                 
@@ -1014,11 +1006,8 @@
             img.style.transform = `translate(0px, 0px) scale(1)`; document.getElementById('fullscreen-photo').style.display = 'flex';
             if (!img.dataset.gestures) {
                 img.dataset.gestures = "true";
-                // --- Для телефонов (пальцы) ---
                 img.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { fsInitDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY); fsInitScale = fsScale; } else if (e.touches.length === 1) { fsStartX = e.touches[0].pageX - fsX; fsStartY = e.touches[0].pageY - fsY; } }, { passive: false });
                 img.addEventListener('touchmove', (e) => { if (e.cancelable) e.preventDefault(); if (e.touches.length === 2) { fsScale = Math.min(Math.max(1, fsInitScale * (Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY) / fsInitDist)), 5); img.style.transform = `translate(${fsX}px, ${fsY}px) scale(${fsScale})`; } else if (e.touches.length === 1 && fsScale > 1) { fsX = e.touches[0].pageX - fsStartX; fsY = e.touches[0].pageY - fsStartY; img.style.transform = `translate(${fsX}px, ${fsY}px) scale(${fsScale})`; } }, { passive: false });
-                
-                // --- ВЕРНУЛ: Для ПК (мышка) ---
                 img.addEventListener('wheel', (e) => { e.preventDefault(); const zoomAmount = e.deltaY > 0 ? 0.9 : 1.1; fsScale = Math.min(Math.max(1, fsScale * zoomAmount), 5); if (fsScale === 1) { fsX = 0; fsY = 0; } img.style.transform = `translate(${fsX}px, ${fsY}px) scale(${fsScale})`; }, { passive: false });
                 img.addEventListener('mousedown', (e) => { if (fsScale > 1) { isDragging = true; fsStartX = e.pageX - fsX; fsStartY = e.pageY - fsY; } });
                 window.addEventListener('mousemove', (e) => { if (isDragging && fsScale > 1) { fsX = e.pageX - fsStartX; fsY = e.pageY - fsStartY; img.style.transform = `translate(${fsX}px, ${fsY}px) scale(${fsScale})`; } });
@@ -1071,26 +1060,27 @@
 
                     let doc_no = 'UNKNOWN', supplier = 'UNKNOWN';
                     let headerRowIdx = -1;
-                    let colMap = { code: -1, name: -1, qty: -1, price: -1 };
+                    let colMap = { code: -1, brand: -1, desc: -1, qty: -1, price: -1 };
 
-                    for (let i = 0; i < Math.min(25, rows.length); i++) {
-                        const row = rows[i];
-                        if (!row || row.length === 0) continue;
+                    for (let i = 0; i < Math.min(30, rows.length); i++) {
+                        const row = rows[i] || [];
+                        if (row.length === 0) continue;
 
                         for (let j = 0; j < row.length; j++) {
                             const cellValue = String(row[j] || '').toUpperCase().trim();
-                            if (cellValue.includes('CONTRACT NO')) doc_no = row[j+1] || row[j+2] || 'UNKNOWN';
-                            if (cellValue.includes('THE SELLER') || cellValue.includes('VENDOR')) supplier = row[j+1] || row[j+2] || 'UNKNOWN';
+                            if (cellValue.includes('CONTRACT NO')) doc_no = rows[i][j+1] || (rows[i+1] && rows[i+1][j]) || doc_no;
+                            if (cellValue.includes('THE SELLER') || cellValue.includes('VENDOR')) supplier = rows[i][j+1] || (rows[i+1] && rows[i+1][j+2]) || supplier;
                         }
 
-                        let cIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s === 'CODE' || s === 'ITEM'; });
-                        let qIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('QUANTITY') || s === 'QTY'; });
-                        let pIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('PRICE'); });
-                        let nIdx = row.findIndex(c => { const s = String(c||'').toUpperCase().trim(); return s.includes('DESCRIPTION') || s.includes('BRAND'); });
+                        let cIdx = row.findIndex(c => String(c||'').toUpperCase().trim() === 'CODE' || String(c||'').toUpperCase().trim() === 'ITEM');
+                        let qIdx = row.findIndex(c => String(c||'').toUpperCase().trim().includes('QUANTITY') || String(c||'').toUpperCase().trim() === 'QTY');
+                        let pIdx = row.findIndex(c => String(c||'').toUpperCase().trim().includes('PRICE'));
+                        let bIdx = row.findIndex(c => String(c||'').toUpperCase().trim() === 'BRAND');
+                        let dIdx = row.findIndex(c => String(c||'').toUpperCase().trim().includes('DESCRIPTION'));
 
                         if (cIdx !== -1 && qIdx !== -1 && pIdx !== -1) {
                             headerRowIdx = i;
-                            colMap = { code: cIdx, name: nIdx, qty: qIdx, price: pIdx };
+                            colMap = { code: cIdx, brand: bIdx, desc: dIdx, qty: qIdx, price: pIdx };
                             break;
                         }
                     }
@@ -1109,17 +1099,21 @@
 
                         let qty = parseFloat(row[colMap.qty]);
                         let price = parseFloat(row[colMap.price]);
-                        let name = colMap.name !== -1 ? String(row[colMap.name] || '') : 'Без названия';
+                        
+                        let brandStr = colMap.brand !== -1 ? String(row[colMap.brand] || '').trim() : '';
+                        let descStr = colMap.desc !== -1 ? String(row[colMap.desc] || '').trim() : '';
+                        let fullName = `${brandStr} ${descStr}`.trim();
+                        if (!fullName) fullName = 'Без названия';
 
                         if (!isNaN(qty) && !isNaN(price)) {
                             parsedInvoiceData.push({
                                 doc_no: doc_no,
                                 supplier: supplier,
                                 item_id: codeCell,
-                                item_name: name,
+                                item_name: fullName,
                                 qty: qty,
                                 cost: price,
-                                staff_id: (typeof currentSeller !== 'undefined' && currentSeller) ? currentSeller.uid : 'Auto-Import' 
+                                staff_id: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.uid : 'Auto-Import' 
                             });
                         }
                     }
@@ -1140,7 +1134,7 @@
 
                 } catch (error) {
                     console.error(error);
-                    alert("❌ Ошибка при чтении Excel файла. Убедитесь, что файл не поврежден.");
+                    alert("❌ Ошибка при чтении файла Excel.");
                 }
             };
             
@@ -1150,6 +1144,9 @@
         function sendInvoiceToBackend() {
             if (parsedInvoiceData.length === 0) return alert("Корзина пуста!");
             
+            const rateInput = document.getElementById('exchangeRate');
+            const rate = rateInput ? (parseFloat(rateInput.value) || 1) : 1;
+
             const btn = document.getElementById('sendInvoiceBtn');
             const statusContainer = document.getElementById('status-container');
             const statusBar = document.getElementById('status-bar');
@@ -1160,14 +1157,13 @@
             btn.style.opacity = '0.5';
             statusContainer.style.display = 'block';
             
-            // Обновляем статус: начало
             statusText.innerText = "Связь с сервером...";
             statusBar.style.width = '10%';
             statusPercent.innerText = '10%';
 
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'income', data: parsedInvoiceData })
+                body: JSON.stringify({ action: 'income', data: parsedInvoiceData, rate: rate })
             })
             .then(r => r.json())
             .then(res => {
@@ -1179,7 +1175,7 @@
                     setTimeout(() => {
                         alert("✅ Накладная успешно проведена!");
                         toggleIncomeModule();
-                        if (typeof refreshData === 'function') refreshData(); 
+                        if (typeof load === 'function') load(); 
                     }, 500);
                 } else {
                     statusText.innerText = "Ошибка сервера";
@@ -1195,17 +1191,26 @@
             .finally(() => {
                 btn.disabled = false;
                 btn.style.opacity = '1';
-                // Не скрываем контейнер сразу, чтобы пользователь увидел результат
             });
         }
     </script>
+
     <div id="income-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
         <div style="background: #111; border: 1px solid #333; border-radius: 8px; width: 95%; max-width: 600px; padding: 20px; color: #fff; max-height: 90vh; display: flex; flex-direction: column; position: relative;">
             <button onclick="toggleIncomeModule()" style="position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
-            <h3 style="margin-bottom: 10px; color: #2ecc71;">📦 Импорт накладной (CSV)</h3>
-            <p style="font-size: 12px; color: #aaa; margin-bottom: 15px;">Загрузите инвойс. Система сама найдет колонки Code, Qty и Price.</p>
+            <h3 style="margin-bottom: 10px; color: #2ecc71;">📦 Импорт накладной</h3>
             
-            <input type="file" id="invoiceFileInput" accept=".csv, .xls, .xlsx" style="margin-bottom: 15px; color: #fff; width: 100%; border: 1px dashed #555; padding: 10px; background: #0a0a0a;">
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 10px; color: #888;">Курс USD/KZT:</label>
+                    <input type="number" id="exchangeRate" value="450" style="width: 100%; background: #0a0a0a; color: #f1c40f; border: 1px dashed #555; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">
+                </div>
+                <div style="flex: 2;">
+                    <label style="font-size: 10px; color: #888;">Выберите файл:</label>
+                    <input type="file" id="invoiceFileInput" accept=".csv, .xls, .xlsx" style="width: 100%; color: #fff; border: 1px dashed #555; padding: 10px; background: #0a0a0a; border-radius: 4px; font-size: 12px;">
+                </div>
+            </div>
+            
             <button onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;">РАСПОЗНАТЬ ФАЙЛ</button>
             
             <div id="invoicePreviewArea" style="display: none; margin-top: 20px; flex-direction: column; overflow: hidden;">
@@ -1217,13 +1222,14 @@
                                 <th style="padding: 8px;">Код</th>
                                 <th style="padding: 8px;">Наименование</th>
                                 <th style="padding: 8px;">Кол-во</th>
-                                <th style="padding: 8px;">Цена</th>
+                                <th style="padding: 8px;">Цена ($)</th>
                             </tr>
                         </thead>
                         <tbody id="invoiceTableBody"></tbody>
                     </table>
                 </div>
-                <div id="status-container" style="display: none; margin: 15px 0; padding: 10px; background: #050505; border: 1px solid #333; border-radius: 4px;">
+                
+                <div id="status-container" style="display: none; margin-bottom: 15px; padding: 10px; background: #050505; border: 1px solid #333; border-radius: 4px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px;">
                         <span id="status-text" style="color: #2ecc71;">Подготовка...</span>
                         <span id="status-percent" style="color: #aaa;">0%</span>
@@ -1232,16 +1238,8 @@
                         <div id="status-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.3s;"></div>
                     </div>
                 </div>
-                <div id="status-container" style="display: none; margin: 15px 0; padding: 10px; background: #050505; border: 1px solid #333; border-radius: 4px;">
-    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 11px;">
-        <span id="status-text" style="color: #2ecc71;">Подготовка...</span>
-        <span id="status-percent" style="color: #aaa;">0%</span>
-    </div>
-    <div style="width: 100%; height: 4px; background: #222; border-radius: 2px; overflow: hidden;">
-        <div id="status-bar" style="width: 0%; height: 100%; background: #2ecc71; transition: width 0.3s;"></div>
-    </div>
-</div>
-                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="margin-top: 15px; background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
+                
+                <button id="sendInvoiceBtn" onclick="sendInvoiceToBackend()" style="background: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; width: 100%; cursor: pointer; font-weight: bold;">
                     ✅ ОПРИХОДОВАТЬ НА СКЛАД
                 </button>
             </div>
