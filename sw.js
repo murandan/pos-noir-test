@@ -2,7 +2,7 @@ const CACHE_NAME = 'pos-v72'; // <--- ВОТ ТУТ ПИШЕТСЯ ВЕРСИЯ,
 
 const ASSETS = [
   './',
-  './pos_test.html',
+  './index.html',
   './config.js',
   './manifest.json',
   './icon.png' // <--- Вот она, разгадка! Мы указали правильное имя.
