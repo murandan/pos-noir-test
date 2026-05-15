@@ -342,7 +342,10 @@
                 income_name: "Наименование",
                 income_qty: "Кол-во",
                 income_price: "Цена ($)",
-                income_confirm: "✅ ОПРИХОДОВАТЬ НА СКЛАД"
+                income_confirm: "✅ ОПРИХОДОВАТЬ НА СКЛАД",
+                income_meta_supplier: "Поставщик",
+                income_meta_doc: "Документ",
+                income_meta_items: "Позиций"
             },
             kz: {
                 btn_sale: "САТУ", btn_return: "ҚАЙТАРУ", search_placeholder: "ІЗДЕУ...",
@@ -372,7 +375,10 @@
                 income_name: "Атауы",
                 income_qty: "Саны",
                 income_price: "Бағасы ($)",
-                income_confirm: "✅ ҚОЙМАҒА КІРІСТЕУ"
+                income_confirm: "✅ ҚОЙМАҒА КІРІСТЕУ",
+                income_meta_supplier: "Жеткізуші",
+                income_meta_doc: "Құжат",
+                income_meta_items: "Позициялар"
             }
         };
 
@@ -1192,7 +1198,16 @@ sortedItems.forEach(item => {
                         }
                     }
 
-                    document.getElementById('invoiceMetadata').innerText = `Поставщик: ${supplier} | Документ: ${doc_no} | Позиций: ${parsedInvoiceData.length}`;
+                    const labels = translations[currentLang];
+                    const labelStyle = 'color: #888; font-weight: normal;';
+                    const dataStyle = 'color: #f1c40f; font-weight: bold;';
+
+                    document.getElementById('invoiceMetadata').innerHTML = `
+                        <span style="${labelStyle}">${labels.income_meta_supplier}:</span> <span style="${dataStyle}">${supplier}</span> | 
+                        <span style="${labelStyle}">${labels.income_meta_doc}:</span> <span style="${dataStyle}">${doc_no}</span> | 
+                        <span style="${labelStyle}">${labels.income_meta_items}:</span> <span style="${dataStyle}">${parsedInvoiceData.length}</span>
+                    `;
+
                     const tbody = document.getElementById('invoiceTableBody');
                     tbody.innerHTML = '';
                     parsedInvoiceData.forEach(item => {
