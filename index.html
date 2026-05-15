@@ -1062,8 +1062,28 @@
 
                         for (let j = 0; j < row.length; j++) {
                             const cellValue = String(row[j] || '').toUpperCase().trim();
-                            if (cellValue.includes('CONTRACT NO')) doc_no = rows[i][j+1] || (rows[i+1] && rows[i+1][j]) || doc_no;
-                            if (cellValue.includes('THE SELLER') || cellValue.includes('VENDOR')) supplier = rows[i][j+1] || (rows[i+1] && rows[i+1][j+2]) || supplier;
+                            
+                            // Умный поиск контракта (ищем первое непустое значение правее)
+                            if (cellValue.includes('CONTRACT NO')) {
+                                for (let k = j + 1; k < row.length; k++) {
+                                    if (row[k] && String(row[k]).trim() !== '') {
+                                        doc_no = String(row[k]).trim();
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Умный поиск поставщика (ищем первое непустое значение правее)
+                            if (cellValue.includes('THE SELLER') || cellValue.includes('VENDOR')) {
+                                for (let k = j + 1; k < row.length; k++) {
+                                    if (row[k] && String(row[k]).trim() !== '') {
+                                        supplier = String(row[k]).trim();
+                                        // Очищаем от лишних кавычек, если они есть
+                                        supplier = supplier.replace(/^"|"$/g, '');
+                                        break;
+                                    }
+                                }
+                            }
                         }
 
                         let cIdx = row.findIndex(c => String(c||'').toUpperCase().trim() === 'CODE' || String(c||'').toUpperCase().trim() === 'ITEM');
