@@ -183,7 +183,7 @@
             
             <button onclick="openReport()" style="padding: 0 15px; background: #111; color: #f1c40f; border: 1px solid #333; border-radius: 4px; font-size: 16px; cursor: pointer;">📊</button>
             
-            <button onclick="toggleIncomeModule()" style="padding: 0 10px; background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">📦 ПРИЕМКА</button>
+            <button onclick="toggleIncomeModule()" style="padding: 0 10px; background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 5px;">📦 <span data-i18n="receive_btn">ПРИЕМКА</span></button>
             
             <button id="btn-settings" onclick="openSettings()" style="padding: 0 15px; background: #222; color: #eee; border: 1px solid #555; border-radius: 4px; cursor: pointer;">⚙️ <span id="queue-counter" class="queue-badge">0</span></button>
         </div>
@@ -345,7 +345,8 @@
                 income_confirm: "✅ ОПРИХОДОВАТЬ НА СКЛАД",
                 income_meta_supplier: "Поставщик",
                 income_meta_doc: "Документ",
-                income_meta_items: "Позиций"
+                income_meta_items: "Позиций",
+                receive_btn: "ПРИЕМКА"
             },
             kz: {
                 btn_sale: "САТУ", btn_return: "ҚАЙТАРУ", search_placeholder: "ІЗДЕУ...",
@@ -378,7 +379,8 @@
                 income_confirm: "✅ ҚОЙМАҒА КІРІСТЕУ",
                 income_meta_supplier: "Жеткізуші",
                 income_meta_doc: "Құжат",
-                income_meta_items: "Позициялар"
+                income_meta_items: "Позициялар",
+                receive_btn: "ҚАБЫЛДАУ"
             }
         };
 
