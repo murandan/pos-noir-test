@@ -1254,7 +1254,7 @@ sortedItems.forEach(item => {
 
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'income', data: parsedInvoiceData, rate: rate })
+                body: JSON.stringify({ action: 'income', data: parsedInvoiceData })
             })
             .then(r => r.json())
             .then(res => {
@@ -1291,15 +1291,9 @@ sortedItems.forEach(item => {
             <button onclick="toggleIncomeModule()" style="position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer;">✕</button>
             <h3 style="margin-bottom: 10px; color: #2ecc71;" data-i18n="income_title">📦 Импорт накладной</h3>
             
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <label style="font-size: 10px; color: #888;" data-i18n="income_rate">Курс USD/KZT:</label>
-                    <input type="number" id="exchangeRate" value="450" style="width: 100%; background: #0a0a0a; color: #f1c40f; border: 1px dashed #555; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 14px;">
-                </div>
-                <div style="flex: 2;">
-                    <label style="font-size: 10px; color: #888;" data-i18n="income_file">Выберите файл:</label>
-                    <input type="file" id="invoiceFileInput" accept=".csv, .xls, .xlsx" style="width: 100%; color: #fff; border: 1px dashed #555; padding: 10px; background: #0a0a0a; border-radius: 4px; font-size: 12px;">
-                </div>
+            <div style="margin-bottom: 15px;">
+                <label style="font-size: 10px; color: #888;" data-i18n="income_file">Выберите файл:</label>
+                <input type="file" id="invoiceFileInput" accept=".csv, .xls, .xlsx" style="width: 100%; color: #fff; border: 1px dashed #555; padding: 10px; background: #0a0a0a; border-radius: 4px; font-size: 12px;">
             </div>
             
             <button onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;" data-i18n="income_parse">РАСПОЗНАТЬ ФАЙЛ</button>
