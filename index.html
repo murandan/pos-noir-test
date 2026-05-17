@@ -1090,6 +1090,8 @@ sortedItems.forEach(item => {
         
         // --- МОДУЛЬ УМНОЙ ПРИЕМКИ (ИНВОЙСЫ) ---
         let parsedInvoiceData = [];
+        let currentFileBase64 = "";  // Сюда сохраним закодированный файл
+        let currentFileName = "";    // Сюда сохраним имя файла
 
         function toggleIncomeModule() {
             const modal = document.getElementById('income-modal');
@@ -1108,6 +1110,16 @@ sortedItems.forEach(item => {
             if (!fileInput.files.length) return alert("Пожалуйста, выберите файл!");
 
             const file = fileInput.files[0];
+            
+            // --- НАЧАЛО НОВОГО БЛОКА ДЛЯ GOOGLE ДИСКА ---
+            currentFileName = file.name;
+            const b64Reader = new FileReader();
+            b64Reader.onload = function(evt) {
+                currentFileBase64 = evt.target.result; 
+            };
+            b64Reader.readAsDataURL(file);
+            // --- КОНЕЦ НОВОГО БЛОКА ---
+
             const reader = new FileReader();
 
             reader.onload = function(e) {
@@ -1254,7 +1266,12 @@ sortedItems.forEach(item => {
 
             fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'income', data: parsedInvoiceData })
+                body: JSON.stringify({ 
+                    action: 'income', 
+                    data: parsedInvoiceData,
+                    fileBase64: currentFileBase64, // Добавили слепок файла
+                    fileName: currentFileName       // Добавили имя файла
+                })
             })
             .then(r => r.json())
             .then(res => {
