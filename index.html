@@ -419,6 +419,18 @@
         let db = [], cart = [], mode = 'sale', pendingMethod = null;
         let staffList = [], currentUser = null;
         let currentPinInput = '';
+        let invoiceSynonyms = {};
+
+        // --- Умная функция проверки синонимов ---
+        function isSynonym(cellValue, targetKey) {
+            if (!cellValue) return false;
+            const cleanCell = String(cellValue).trim().toLowerCase();
+            if (cleanCell === targetKey.toLowerCase()) return true; // Прямое совпадение
+            
+            const synonymsList = invoiceSynonyms[targetKey] || [];
+            return synonymsList.some(syn => cleanCell.includes(syn)); // Ищем по словарю
+        }
+        // ----------------------------------------
 
         // Память для защиты от подбора ПИН-кода
         let failedAttempts = parseInt(localStorage.getItem('pos_fails')) || 0;
@@ -631,6 +643,13 @@
                     staffList = data.staff;
                     localStorage.setItem('staff_cache', JSON.stringify(staffList));
                 }
+
+                // ---> ВСТАВЛЯЕМ СИНОНИМЫ СЮДА <---
+                if (data.synonyms) {
+                    invoiceSynonyms = data.synonyms;
+                }
+                // ---------------------------------
+
                 const t = data.totals || { cash: 0, qr_kaspi: 0, installment: 0, pos_terminal: 0, transfer: 0 };
                 document.getElementById('sum-cash').innerText = (t.cash || 0).toLocaleString() + ' ₸';
                 document.getElementById('sum-qr').innerText   = (t.qr_kaspi || t.qr || 0).toLocaleString() + ' ₸';
@@ -1372,11 +1391,11 @@ sortedItems.forEach(item => {
                             }
                         }
 
-                        let cIdx = row.findIndex(c => String(c||'').toUpperCase().trim() === 'CODE' || String(c||'').toUpperCase().trim() === 'ITEM');
-                        let qIdx = row.findIndex(c => String(c||'').toUpperCase().trim().includes('QUANTITY') || String(c||'').toUpperCase().trim() === 'QTY');
-                        let pIdx = row.findIndex(c => String(c||'').toUpperCase().trim().includes('PRICE'));
-                        let bIdx = row.findIndex(c => String(c||'').toUpperCase().trim() === 'BRAND');
-                        let dIdx = row.findIndex(c => String(c||'').toUpperCase().trim().includes('DESCRIPTION'));
+                        let cIdx = row.findIndex(c => isSynonym(c, 'id'));
+                        let qIdx = row.findIndex(c => isSynonym(c, 'qty'));
+                        let pIdx = row.findIndex(c => isSynonym(c, 'price'));
+                        let bIdx = row.findIndex(c => isSynonym(c, 'brand'));
+                        let dIdx = row.findIndex(c => isSynonym(c, 'name'));
 
                         if (cIdx !== -1 && qIdx !== -1 && pIdx !== -1) {
                             headerRowIdx = i;
