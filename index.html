@@ -420,6 +420,42 @@
         let staffList = [], currentUser = null;
         let currentPinInput = '';
 
+        // Память для защиты от подбора ПИН-кода
+        let failedAttempts = parseInt(localStorage.getItem('pos_fails')) || 0;
+        let blockUntil = parseInt(localStorage.getItem('pos_block')) || 0;
+
+        function checkBlockTimer() {
+            if (blockUntil > Date.now()) {
+                const err = document.getElementById('login-error');
+                const field = document.getElementById('pin-field');
+                
+                field.style.color = '#e74c3c';
+                err.style.color = '#e74c3c';
+                err.style.visibility = 'visible';
+                
+                const interval = setInterval(() => {
+                    const remaining = Math.ceil((blockUntil - Date.now()) / 1000);
+                    
+                    if (remaining <= 0) {
+                        clearInterval(interval);
+                        failedAttempts = 0;
+                        localStorage.removeItem('pos_fails');
+                        localStorage.removeItem('pos_block');
+                        
+                        err.style.visibility = 'hidden';
+                        field.style.color = '#f1c40f'; // Возвращаем желтые звездочки
+                        err.innerText = "НЕВЕРНЫЙ ПИН-КОД";
+                    } else {
+                        const mins = Math.floor(remaining / 60);
+                        const secs = remaining % 60;
+                        err.innerText = `БЛОКИРОВКА. ОЖИДАНИЕ: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                    }
+                }, 1000);
+                return true;
+            }
+            return false;
+        }
+
         function applyLanguage(lang) {
             currentLang = lang;
             localStorage.setItem('pos_lang', lang);
@@ -466,37 +502,40 @@
         }
 
         async function handleAutoLogin(val) {
+            // Если касса заблокирована — не реагируем на нажатия
+            if (blockUntil > Date.now()) {
+                clearPin();
+                return; 
+            }
+
             const err = document.getElementById('login-error');
             const field = document.getElementById('pin-field');
             
-            // 1. Визуальный отклик: показываем кассиру, что идет запрос (синий цвет)
             field.style.color = '#3498db'; 
             err.innerText = "ПРОБИВАЕМ ПО БАЗЕ...";
             err.style.color = '#3498db';
             err.style.visibility = 'visible';
 
             try {
-                // 2. Отправляем "слепой" запрос на сервер Google
                 const response = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        action: 'verifyPin',
-                        pin: val
-                    })
+                    body: JSON.stringify({ action: 'verifyPin', pin: val })
                 });
 
                 const res = await response.json();
 
                 if (res.success) {
-                    // 3. УСПЕХ: Сервер пустил (зеленый цвет)
+                    // Сбрасываем счетчик ошибок при успешном входе
+                    failedAttempts = 0;
+                    localStorage.removeItem('pos_fails');
+                    localStorage.removeItem('pos_block');
+
                     field.style.color = '#2ecc71'; 
                     err.innerText = "ДОСТУП РАЗРЕШЕН";
                     err.style.color = '#2ecc71';
                     
                     setTimeout(() => {
-                        login(res.user); // Пускаем в кассу
-                        
-                        // Сбрасываем стили для следующего кассира
+                        login(res.user); 
                         field.style.color = '#f1c40f';
                         err.style.color = '#e74c3c';
                         err.style.visibility = 'hidden';
@@ -504,26 +543,45 @@
                     }, 400);
 
                 } else {
-                    // ПИН не подошел
                     throw new Error(res.error || "Неверный ПИН-код");
                 }
 
             } catch (error) {
                 console.error("Ошибка авторизации:", error);
                 
-                // 4. ОШИБКА: Сервер отклонил (красный цвет + тряска)
+                // Увеличиваем счетчик неудач
+                failedAttempts++;
+                localStorage.setItem('pos_fails', failedAttempts);
+
+                if (failedAttempts >= 3) {
+                    // Блокируем на 5 минут (5 * 60 * 1000)
+                    blockUntil = Date.now() + 5 * 60 * 1000;
+                    localStorage.setItem('pos_block', blockUntil);
+                    
+                    field.classList.add('error-shake');
+                    setTimeout(() => { 
+                        field.classList.remove('error-shake');
+                        clearPin();
+                    }, 800);
+                    
+                    checkBlockTimer(); 
+                    return;
+                }
+
                 field.style.color = '#e74c3c'; 
                 field.classList.add('error-shake');
-                err.innerText = "НЕВЕРНЫЙ ПИН-КОД";
+                
+                const attemptsLeft = 3 - failedAttempts;
+                err.innerText = `НЕВЕРНЫЙ ПИН. ОСТАЛОСЬ: ${attemptsLeft}`;
                 err.style.color = '#e74c3c';
                 err.style.visibility = 'visible';
 
                 setTimeout(() => { 
                     field.classList.remove('error-shake');
                     err.style.visibility = 'hidden'; 
-                    field.style.color = '#f1c40f'; // Возвращаем желтый цвет звездочкам
+                    field.style.color = '#f1c40f'; 
                     clearPin();
-                }, 800);
+                }, 1200);
             }
         }
 
@@ -1077,6 +1135,7 @@ sortedItems.forEach(item => {
         }
 
         window.addEventListener('load', () => {
+            checkBlockTimer(); // <-- ВСТАВИТЬ ЭТУ СТРОКУ СЮДА
             applyLanguage(currentLang); 
             updateQueueCounter();
             document.getElementById('login-screen').style.display = 'flex';
