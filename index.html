@@ -1173,6 +1173,7 @@ sortedItems.forEach(item => {
             } else {
                 modal.style.display = 'none';
                 document.getElementById('invoicePreviewArea').style.display = 'none';
+                document.getElementById('parseInvoiceBtn').style.display = 'block'; // Возвращаем кнопку
                 
                 const fileInput = document.getElementById('invoiceFileInput');
                 fileInput.value = '';
@@ -1311,6 +1312,7 @@ sortedItems.forEach(item => {
                             </tr>`;
                     });
                     document.getElementById('invoicePreviewArea').style.display = 'flex';
+                    document.getElementById('parseInvoiceBtn').style.display = 'none'; // Прячем кнопку
 
                 } catch (error) {
                     console.error(error);
@@ -1415,8 +1417,7 @@ sortedItems.forEach(item => {
                 </div>
             </div>
             
-            <button onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;" data-i18n="income_parse">РАСПОЗНАТЬ ФАЙЛ</button>
-            
+<button id="parseInvoiceBtn" onclick="processInvoiceFile()" style="background: #1a3a20; color: #2ecc71; border: 1px solid #2ecc71; padding: 12px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 14px;" data-i18n="income_parse">РАСПОЗНАТЬ ФАЙЛ</button>            
             <div id="invoicePreviewArea" style="display: none; margin-top: 20px; flex-direction: column; overflow: hidden;">
                 <div id="invoiceMetadata" style="margin-bottom: 10px; font-weight: bold; color: #f1c40f; font-size: 13px; text-align: center;"></div>
                 <div style="overflow-y: auto; border: 1px solid #333; margin-bottom: 15px; flex-grow: 1;">
