@@ -465,28 +465,65 @@
             document.getElementById('pin-field').value = currentPinInput;
         }
 
-        function handleAutoLogin(val) {
+        async function handleAutoLogin(val) {
             const err = document.getElementById('login-error');
             const field = document.getElementById('pin-field');
             
-            if (staffList.length === 0) {
-                err.innerText = "ОШИБКА: БАЗА СОТРУДНИКОВ ПУСТА";
-                err.style.visibility = 'visible';
-                setTimeout(() => { err.style.visibility = 'hidden'; err.innerText = "НЕВЕРНЫЙ ПИН-КОД"; clearPin(); }, 2500);
-                return;
-            }
-            
-            const user = staffList.find(u => u.pin === val);
-            if (user) {
-                login(user);
-            } else {
+            // 1. Визуальный отклик: показываем кассиру, что идет запрос (синий цвет)
+            field.style.color = '#3498db'; 
+            err.innerText = "ПРОБИВАЕМ ПО БАЗЕ...";
+            err.style.color = '#3498db';
+            err.style.visibility = 'visible';
+
+            try {
+                // 2. Отправляем "слепой" запрос на сервер Google
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'verifyPin',
+                        pin: val
+                    })
+                });
+
+                const res = await response.json();
+
+                if (res.success) {
+                    // 3. УСПЕХ: Сервер пустил (зеленый цвет)
+                    field.style.color = '#2ecc71'; 
+                    err.innerText = "ДОСТУП РАЗРЕШЕН";
+                    err.style.color = '#2ecc71';
+                    
+                    setTimeout(() => {
+                        login(res.user); // Пускаем в кассу
+                        
+                        // Сбрасываем стили для следующего кассира
+                        field.style.color = '#f1c40f';
+                        err.style.color = '#e74c3c';
+                        err.style.visibility = 'hidden';
+                        err.innerText = "НЕВЕРНЫЙ ПИН-КОД";
+                    }, 400);
+
+                } else {
+                    // ПИН не подошел
+                    throw new Error(res.error || "Неверный ПИН-код");
+                }
+
+            } catch (error) {
+                console.error("Ошибка авторизации:", error);
+                
+                // 4. ОШИБКА: Сервер отклонил (красный цвет + тряска)
+                field.style.color = '#e74c3c'; 
                 field.classList.add('error-shake');
+                err.innerText = "НЕВЕРНЫЙ ПИН-КОД";
+                err.style.color = '#e74c3c';
                 err.style.visibility = 'visible';
+
                 setTimeout(() => { 
                     field.classList.remove('error-shake');
                     err.style.visibility = 'hidden'; 
+                    field.style.color = '#f1c40f'; // Возвращаем желтый цвет звездочкам
                     clearPin();
-                }, 500);
+                }, 800);
             }
         }
 
