@@ -163,6 +163,15 @@
         .rep-search-container { position: relative; width: 100%; }
         #rep-clear-search { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #666; font-size: 16px; cursor: pointer; display: none; padding: 5px; }
         .rep-table-header { position: sticky; top: 0; z-index: 10; background: #111; display: grid; grid-template-columns: 1fr 40px 85px; gap: 8px; font-size: 10px; color: #666; font-weight: bold; padding: 8px 8px; border-bottom: 1px solid #333; text-transform: uppercase; }
+    
+    /* --- КНОПКА SOFT SYNC --- */
+        @keyframes spin-sync { 100% { transform: rotate(360deg); } }
+        .sync-spin { 
+            animation: spin-sync 1s linear infinite; 
+            color: #2ecc71 !important; 
+            border-color: #2ecc71 !important;
+            pointer-events: none; 
+        }
     </style>
 </head>
 <body>
@@ -200,6 +209,8 @@
                 <input type="text" id="sb" class="s-input" data-i18n-placeholder="search_placeholder" placeholder="ПОИСК..." oninput="handleSearchInput()" style="width: 100%; padding-right: 35px;">
                 <span id="clear-search" onclick="clearSearch()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #888; font-size: 16px; cursor: pointer; display: none; padding: 5px; height: 100%; align-items: center; justify-content: center;">✕</span>
             </div>
+            
+            <button id="btn-sync-data" onclick="refreshPosData()" style="padding: 0 12px; background: #111; color: #3498db; border: 1px solid #333; border-radius: 4px; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;" title="Обновить остатки и цены">↻</button>
             
             <button onclick="openReport()" style="padding: 0 15px; background: #111; color: #f1c40f; border: 1px solid #333; border-radius: 4px; font-size: 16px; cursor: pointer;">📊</button>
             
@@ -535,6 +546,27 @@
                 localStorage.setItem('db_cache', JSON.stringify(db));
                 localStorage.setItem('totals_cache', JSON.stringify(t));
             } catch (e) { console.error("Ошибка загрузки данных"); }
+        }
+
+        // --- ФУНКЦИЯ МЯГКОГО ОБНОВЛЕНИЯ ДАННЫХ ---
+        async function refreshPosData() {
+            if (!navigator.onLine) {
+                alert(translations[currentLang].msg_no_internet);
+                return;
+            }
+            
+            const btn = document.getElementById('btn-sync-data');
+            btn.classList.add('sync-spin'); // Запускаем анимацию кручения
+            
+            try {
+                // Вызываем вашу уже существующую функцию загрузки
+                await load(); 
+            } finally {
+                // Останавливаем крутилку с небольшой задержкой для красоты
+                setTimeout(() => {
+                    btn.classList.remove('sync-spin');
+                }, 600);
+            }
         }
 
         function render() {
