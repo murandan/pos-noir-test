@@ -1382,7 +1382,7 @@ sortedItems.forEach(item => {
                             const cleanCell = String(cellValue).trim().toLowerCase();
                             if (cleanCell === targetKey.toLowerCase()) return true;
                             const synonymsList = invoiceSynonyms[targetKey] || [];
-                            return synonymsList.some(syn => cleanCell.includes(syn));
+                            return synonymsList.some(syn => syn.trim() !== "" && cleanCell.includes(syn.trim()));
                         }
 
                         let cIdx = row.findIndex(c => isSynonym(c, 'id'));
