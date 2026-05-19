@@ -419,22 +419,11 @@
         let db = [], cart = [], mode = 'sale', pendingMethod = null;
         let staffList = [], currentUser = null;
         let currentPinInput = '';
-        let invoiceSynonyms = {};
-
-        // --- Умная функция проверки синонимов ---
-        function isSynonym(cellValue, targetKey) {
-            if (!cellValue) return false;
-            const cleanCell = String(cellValue).trim().toLowerCase();
-            if (cleanCell === targetKey.toLowerCase()) return true; // Прямое совпадение
-            
-            const synonymsList = invoiceSynonyms[targetKey] || [];
-            return synonymsList.some(syn => cleanCell.includes(syn)); // Ищем по словарю
-        }
-        // ----------------------------------------
 
         // Память для защиты от подбора ПИН-кода
         let failedAttempts = parseInt(localStorage.getItem('pos_fails')) || 0;
         let blockUntil = parseInt(localStorage.getItem('pos_block')) || 0;
+        let invoiceSynonyms = {}; // База синонимов для инвойсов
 
         function checkBlockTimer() {
             if (blockUntil > Date.now()) {
@@ -643,13 +632,9 @@
                     staffList = data.staff;
                     localStorage.setItem('staff_cache', JSON.stringify(staffList));
                 }
-
-                // ---> ВСТАВЛЯЕМ СИНОНИМЫ СЮДА <---
                 if (data.synonyms) {
                     invoiceSynonyms = data.synonyms;
                 }
-                // ---------------------------------
-
                 const t = data.totals || { cash: 0, qr_kaspi: 0, installment: 0, pos_terminal: 0, transfer: 0 };
                 document.getElementById('sum-cash').innerText = (t.cash || 0).toLocaleString() + ' ₸';
                 document.getElementById('sum-qr').innerText   = (t.qr_kaspi || t.qr || 0).toLocaleString() + ' ₸';
@@ -1389,6 +1374,15 @@ sortedItems.forEach(item => {
                                     }
                                 }
                             }
+                        }
+
+                        // Функция сопоставления заголовка с базой синонимов
+                        function isSynonym(cellValue, targetKey) {
+                            if (!cellValue) return false;
+                            const cleanCell = String(cellValue).trim().toLowerCase();
+                            if (cleanCell === targetKey.toLowerCase()) return true;
+                            const synonymsList = invoiceSynonyms[targetKey] || [];
+                            return synonymsList.some(syn => cleanCell.includes(syn));
                         }
 
                         let cIdx = row.findIndex(c => isSynonym(c, 'id'));
